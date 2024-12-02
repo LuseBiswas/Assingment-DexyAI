@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css'
 import { fetchJobs } from './api/jobs';
-import { Search, Briefcase, Building2, Loader2, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Briefcase, Building2, Loader2, Filter, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import JobList from './components/JobList';
 
 function App() {
@@ -48,6 +48,42 @@ function App() {
     return input;
   };
 
+  // Enhanced error handling function
+  const handleErrorResponse = (err) => {
+    if (err.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      switch(err.response.status) {
+        case 400:
+          setError("Bad Request: Invalid search parameters");
+          break;
+        case 401:
+          setError("Unauthorized: Please check your authentication");
+          break;
+        case 403:
+          setError("Forbidden: You don't have permission to access this resource");
+          break;
+        case 404:
+          setError("Not Found: No jobs match your search criteria");
+          break;
+        case 500:
+          setError("Server Error: Internal server problem. Please try again later");
+          break;
+        case 503:
+          setError("Service Unavailable: The job search service is temporarily down");
+          break;
+        default:
+          setError(`Unexpected Error: ${err.response.status} - ${err.response.data.message || 'Unknown error occurred'}`);
+      }
+    } else if (err.request) {
+      // The request was made but no response was received
+      setError("Network Error: Unable to connect to the server. Please check your internet connection.");
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      setError(`Request Setup Error: ${err.message}`);
+    }
+  };
+
   // Search and filter handler
   const handleSearch = async () => {
     if (!keyword.trim()) {
@@ -62,12 +98,20 @@ function App() {
     try {
       const formattedKeyword = formatKeyword(keyword);
       const data = await fetchJobs(formattedKeyword);
-      setJobs(data);
       
-      // Apply initial filtering
-      applyFilters(data);
+      if (!data || data.length === 0) {
+        setError("No jobs found for your search. Try a different keyword.");
+        setJobs([]);
+        setFilteredJobs([]);
+      } else {
+        setJobs(data);
+        // Apply initial filtering
+        applyFilters(data);
+      }
     } catch (err) {
-      setError("Failed to fetch jobs. Please try again.");
+      handleErrorResponse(err);
+      setJobs([]);
+      setFilteredJobs([]);
     } finally {
       setIsLoading(false);
     }
@@ -164,10 +208,11 @@ function App() {
           </select>
         </div>
 
-        {/* Error Handling */}
+        {/* Enhanced Error Handling */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-            {error}
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 flex items-center" role="alert">
+            <AlertCircle className="mr-2 w-6 h-6 text-red-500" />
+            <span className="flex-grow">{error}</span>
           </div>
         )}
 
@@ -211,8 +256,11 @@ function App() {
             </div>
           </div>
         ) : (
-          <div className="text-center text-gray-500 py-8">
-            No jobs found. Try a different keyword or experience level.
+          <div className="text-center text-gray-500 py-8 bg-white rounded-lg shadow-md">
+            <AlertCircle className="mx-auto w-12 h-12 text-gray-400 mb-4" />
+            <p className="text-lg">
+              {error || "No jobs found. Try a different keyword or experience level."}
+            </p>
           </div>
         )}
       </div>
