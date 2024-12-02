@@ -28,7 +28,7 @@ function App() {
 
   // Formatting and search functions
   const formatKeyword = (input) => {
-    const specificKeywords = ['react', 'python', 'java', 'javascript', 'node', 'angular', 'vue'];
+    const specificKeywords = ['react', 'python', 'java', 'javascript', 'node', 'angular', 'vue', 'ruby','software'];
     const lowercaseInput = input.toLowerCase().trim();
 
     if (specificKeywords.includes(lowercaseInput)) {
